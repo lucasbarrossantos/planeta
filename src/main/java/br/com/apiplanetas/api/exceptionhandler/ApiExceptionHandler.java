@@ -1,24 +1,20 @@
 package br.com.apiplanetas.api.exceptionhandler;
 
-import java.nio.file.AccessDeniedException;
-import java.time.OffsetDateTime;
-import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
-
 import br.com.apiplanetas.domain.exception.EntidadeNaoEncontradaException;
 import br.com.apiplanetas.domain.exception.NegocioException;
+import com.fasterxml.jackson.databind.JsonMappingException.Reference;
+import com.fasterxml.jackson.databind.exc.InvalidFormatException;
+import com.fasterxml.jackson.databind.exc.PropertyBindingException;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.springframework.beans.TypeMismatchException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.MessageSource;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
-import org.springframework.util.CollectionUtils;
 import org.springframework.validation.BindException;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.FieldError;
@@ -31,11 +27,11 @@ import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.NoHandlerFoundException;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
-import com.fasterxml.jackson.databind.JsonMappingException.Reference;
-import com.fasterxml.jackson.databind.exc.InvalidFormatException;
-import com.fasterxml.jackson.databind.exc.PropertyBindingException;
 
-import lombok.extern.slf4j.Slf4j;
+import java.nio.file.AccessDeniedException;
+import java.time.OffsetDateTime;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Slf4j
 @ControllerAdvice
@@ -71,7 +67,7 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
     private ResponseEntity<Object> handleValidationInternal(Exception ex, HttpHeaders headers,
                                                             HttpStatus status, WebRequest request, BindingResult bindingResult) {
         ProblemType problemType = ProblemType.DADOS_INVALIDOS;
-        String detail = "Um ou mais campos estão inválidos. Faça o preenchimento correto e tente novamente.";
+        String detail = messageSource.getMessage("entidade.campos-invalidos", null, LocaleContextHolder.getLocale());
 
         List<Problem.Object> problemObjects = bindingResult.getAllErrors().stream()
                 .map(objectError -> {
@@ -118,7 +114,7 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
                                                                    HttpHeaders headers, HttpStatus status, WebRequest request) {
 
         ProblemType problemType = ProblemType.RECURSO_NAO_ENCONTRADO;
-        String detail = String.format("O recurso %s, que você tentou acessar, é inexistente.",
+        String detail = String.format(messageSource.getMessage("recurso.nao-encontrato", null, LocaleContextHolder.getLocale()),
                 ex.getRequestURL());
 
         Problem problem = createProblemBuilder(status, problemType, detail)
@@ -146,8 +142,7 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
 
         ProblemType problemType = ProblemType.PARAMETRO_INVALIDO;
 
-        String detail = String.format("O parâmetro de URL '%s' recebeu o valor '%s', "
-                        + "que é de um tipo inválido. Corrija e informe um valor compatível com o tipo %s.",
+        String detail = String.format(messageSource.getMessage("url.parametro-invalido", null, LocaleContextHolder.getLocale()),
                 ex.getName(), ex.getValue(), ex.getRequiredType().getSimpleName());
 
         Problem problem = createProblemBuilder(status, problemType, detail)
@@ -169,7 +164,7 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
         }
 
         ProblemType problemType = ProblemType.MENSAGEM_INCOMPREENSIVEL;
-        String detail = "O corpo da requisição está inválido. Verifique erro de sintaxe.";
+        String detail = messageSource.getMessage("request.corpo-invalido", null, LocaleContextHolder.getLocale());
 
         Problem problem = createProblemBuilder(status, problemType, detail)
                 .userMessage(MSG_ERRO_GENERICA_USUARIO_FINAL)
@@ -184,8 +179,7 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
         String path = joinPath(ex.getPath());
 
         ProblemType problemType = ProblemType.MENSAGEM_INCOMPREENSIVEL;
-        String detail = String.format("A propriedade '%s' não existe. "
-                + "Corrija ou remova essa propriedade e tente novamente.", path);
+        String detail = String.format(messageSource.getMessage("entidade.propriedade-invalida", null, LocaleContextHolder.getLocale()), path);
 
         Problem problem = createProblemBuilder(status, problemType, detail)
                 .userMessage(MSG_ERRO_GENERICA_USUARIO_FINAL)
@@ -200,8 +194,7 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
         String path = joinPath(ex.getPath());
 
         ProblemType problemType = ProblemType.MENSAGEM_INCOMPREENSIVEL;
-        String detail = String.format("A propriedade '%s' recebeu o valor '%s', "
-                        + "que é de um tipo inválido. Corrija e informe um valor compatível com o tipo %s.",
+        String detail = String.format(messageSource.getMessage("entidade.propriedade.tipo-invalido", null, LocaleContextHolder.getLocale()),
                 path, ex.getValue(), ex.getTargetType().getSimpleName());
 
         Problem problem = createProblemBuilder(status, problemType, detail)
@@ -220,7 +213,7 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
 
         Problem problem = createProblemBuilder(status, problemType, detail)
                 .userMessage(detail)
-                .userMessage("Entidade não encontrada.")
+                .userMessage(messageSource.getMessage("entidade.nao-encontrada", null, LocaleContextHolder.getLocale()))
                 .build();
 
         return handleExceptionInternal(ex, problem, new HttpHeaders(), status, request);
@@ -250,8 +243,8 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
         String detail = ex.getMessage();
 
         Problem problem = createProblemBuilder(status, problemType, detail)
-                .title("Método não reconhecido")
-                .userMessage("Este método ainda não existe ou não foi implementado!")
+                .title(messageSource.getMessage("request.metodo-nao-reconhecido", null, LocaleContextHolder.getLocale()))
+                .userMessage(messageSource.getMessage("request.metodo-nao-implementado", null, LocaleContextHolder.getLocale()))
                 .build();
 
         return handleExceptionInternal(ex, problem, new HttpHeaders(), status, request);

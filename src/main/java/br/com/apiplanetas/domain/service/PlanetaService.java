@@ -6,6 +6,8 @@ import br.com.apiplanetas.domain.model.Planeta;
 import br.com.apiplanetas.domain.repository.PlanetaRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.MessageSource;
+import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -13,6 +15,7 @@ import org.springframework.stereotype.Service;
 public class PlanetaService {
 
     private final PlanetaRepository planetaRepository;
+    private final MessageSource messageSource;
 
     public Planeta salvar(Planeta planeta) {
         return planetaRepository.save(planeta);
@@ -24,13 +27,15 @@ public class PlanetaService {
             planetaRepository.deleteById(planeta.getId());
         } catch (PlanetaNaoEncontradoException e) {
             throw new NegocioException(
-                    String.format("Não é possível excluir pois o planeta %s não existe na base de dados", id), e);
+                    String.format(messageSource
+                            .getMessage("error.planeta-nao-pode-ser-excluido",
+                                    null, LocaleContextHolder.getLocale()), id), e);
         }
     }
 
     public Planeta buscarOuFalhar(String id) {
         return planetaRepository.findById(id)
-                .orElseThrow(() -> new PlanetaNaoEncontradoException(id));
+                .orElseThrow(() -> new PlanetaNaoEncontradoException(messageSource, id));
     }
 
 }
